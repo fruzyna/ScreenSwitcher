@@ -6,36 +6,46 @@ def runCommand(bashCmd):
     process = subprocess.Popen(bashCmd.split(), stdout=subprocess.PIPE)
     output, error = process.communicate()
 
-screensFile = open("screens.cfg", 'r')
-screens = screensFile.read().split('\n')
-monitors = [l.split(':')[0] for l in screens if ":" in l]
-ports = [l.split(':')[1] for l in screens if ":" in l]
+screensFile = open("screens.cfg", 'r').read().split('\n')
+screenNames = [l.split(':')[0] for l in screensFile if ":" in l]
+screenPorts = [l.split(':')[1] for l in screensFile if ":" in l]
 
-setupsFile = open("modes.cfg", 'r')
-setups = setupsFile.read().split('\n')
-modes = [l.split(':')[0] for l in setups if ":" in l]
-mConfig = [l.split(':')[1] for l in setups if ":" in l]
-mOptions = [l.split(':')[2] for l in setups if ":" in l]
+speakersFile = open("speakers.cfg", 'r').read().split('\n')
+speakerNames = [l.split(':')[0] for l in speakersFile if ":" in l]
+speakerPorts = [l.split(':')[1] for l in speakersFile if ":" in l]
+
+modesFile = open("modes.cfg", 'r').read().split('\n')
+modeNames = [l.split(':')[0] for l in modesFile if ":" in l]
+modeScreens = [l.split(':')[1] for l in modesFile if ":" in l]
+modeSpeakers = [l.split(':')[2] for l in modesFile if ":" in l]
+modeComps = [l.split(':')[3] for l in modesFile if ":" in l]
+modeOps = [l.split(':')[4] for l in modesFile if ":" in l]
 
 command = sys.argv[1]
 
 if command == "set":
     mode = sys.argv[2]
-    for i,m in enumerate(modes, start=0):
+    for i,m in enumerate(modeNames, start=0):
         if m == mode:
-            mScreens = mConfig[i].split(',')
-            for j,screen in enumerate(monitors, start=0):
-                port = ports[j]
-                if screen in mScreens:
+            screens = modeScreens[i].split(',')
+            for j,screen in enumerate(screenNames, start=0):
+                port = screenPorts[j]
+                if screen in screens:
                     runCommand("xrandr --output " + port + " --auto")
-                    order = mScreens.index(screen)
+                    order = screens.index(screen)
                     if order == 0:
                         runCommand("xrandr --output " + port + " --primary")
                     else:
-                        runCommand("xrandr --output " + port + " --right-of " + ports[monitors.index(mScreens[order - 1])])
+                        runCommand("xrandr --output " + port + " --right-of " + ports[screenNames.index(screens[order - 1])])
                 else:
                     runCommand("xrandr --output " + port + " --off")
-            if mOptions[i] == "Steam":
+            speakers = modeSpeakers[i]
+            for j,speaker in enumerate(speakerNames, start=0):
+                jack = speakerPorts[j]
+                if speaker == speakers:
+                    runCommand("pacmd -set-default-sink " + jack)
+            runCommand(mDMs[i] + " --replace")
+            if modeOps[i] == "Steam":
                 runCommand("steam -start steam://open/bigpicture")
 elif command == "only":
     screen = sys.argv[2]
