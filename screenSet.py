@@ -7,56 +7,97 @@ def runCommand(bashCmd):
     process = subprocess.Popen(bashCmd.split(), stdout=subprocess.PIPE)
     output, error = process.communicate()
 
-screensFile = open("screens.cfg", 'r').read().split('\n')
-screenNames = [l.split(':')[0] for l in screensFile if ":" in l]
-screenPorts = [l.split(':')[1] for l in screensFile if ":" in l]
+class Mode(object):
+    name = ""
+    screens = []
+    sink = ""
+    options = []
+    def __init__(self, str):
+        parts = str.split(':')
+        self.name = parts[0]
+        self.screens = parts[1].split(',')
+        self.sink = parts[2]
+        self.options = parts[3].split(',')
 
-speakersFile = open("speakers.cfg", 'r').read().split('\n')
-speakerNames = [l.split(':')[0] for l in speakersFile if ":" in l]
-speakerPorts = [l.split(':')[1] for l in speakersFile if ":" in l]
+class Screen(object):
+    name = ""
+    port = ""
+    def __init__(self, str):
+        parts = str.split(':')
+        self.name = parts[0]
+        self.port = parts[1]
+
+class Sink(object):
+    name = ""
+    port = ""
+    def __init__(self, str):
+        parts = str.split(':')
+        self.name = parts[0]
+        self.port = parts[1]
 
 modesFile = open("modes.cfg", 'r').read().split('\n')
-modeNames = [l.split(':')[0] for l in modesFile if ":" in l]
-modeScreens = [l.split(':')[1] for l in modesFile if ":" in l]
-modeSpeakers = [l.split(':')[2] for l in modesFile if ":" in l]
-modeOps = [l.split(':')[3] for l in modesFile if ":" in l]
+modes = [Mode(l) for l in modesFile if ":" in l and l[0] is not '#']
+
+screensFile = open("screens.cfg", 'r').read().split('\n')
+screens = [Screen(l) for l in screensFile if ":" in l and l[0] is not '#']
+
+speakersFile = open("speakers.cfg", 'r').read().split('\n')
+sinks = [Sink(l) for l in speakersFile if ":" in l and l[0] is not '#']
+
+# match up
+for m in modes:
+    ports = []
+    for s in m.screens:
+        for p in screens:
+            if s == p.name:
+                ports.append(p.port)
+    m.screens = ports
+    for s in sinks:
+        if s.name == m.sink:
+            m.sink = s.port
 
 command = sys.argv[1]
 
 if command == "set":
-    mode = sys.argv[2]
-    if mode in modeNames:
-        modeNum = modeNames.index(mode)
-        screens = modeScreens[modeNum].split(',')
-        for screenNum,screen in enumerate(screenNames, start=0):
-            port = screenPorts[screenNum]
-            if screen in screens:
-                runCommand("xrandr --output " + port + " --auto")
-                order = screens.index(screen)
+    modeNm = sys.argv[2]
+    mode = Mode("None:none:none:none")
+    for m in modes:
+        if m.name == modeNm:
+            mode = m
+    if mode.name != "None":
+        for screen in screens:
+            if screen.port in mode.screens:
+                runCommand("xrandr --output " + screen.port + " --auto")
+                order = mode.screens.index(screen.port)
                 if order == 0:
-                    runCommand("xrandr --output " + port + " --primary")
+                    runCommand("xrandr --output " + screen.port + " --primary")
                 else:
-                    runCommand("xrandr --output " + port + " --right-of " + screenPorts[screenNames.index(screens[order - 1])])
+                    runCommand("xrandr --output " + screen.port + " --right-of " + mode.screens[order - 1])
             else:
-                runCommand("xrandr --output " + port + " --off")
-        speakers = modeSpeakers[modeNum]
-        for speakerNum,speaker in enumerate(speakerNames, start=0):
-            jack = speakerPorts[speakerNum]
-            if speaker == speakers:
-                runCommand("pacmd set-default-sink " + jack)
-        op = modeOps[modeNum]
-        if op == "Steam":
-            print("Launching Steam")
+                runCommand("xrandr --output " + screen.port + " --off")
+
+        runCommand("pacmd set-default-sink " + mode.sink)
+
+        if "bigpic" in mode.options:
             runCommand("steam -start steam://open/bigpicture")
+        if "steam" in mode.options:
+            runCommand("steam")
     else:
-        print("No mode \"" + mode + "\" exists!")
-elif command == "only":
+        print("No mode \"" + modeNm + "\" exists!")
+elif command == "screen":
     screen = sys.argv[2]
-    for i,s in enumerate(monitors, start=0):
-        if(s == screen):
-            runCommand("xrandr --output " + ports[i] + " --auto")
-            runCommand("xrandr --output " + ports[i] + " --primary")
+    for s in screens:
+        if s.name == screen:
+            runCommand("xrandr --output " + s.port + " --auto")
+            runCommand("xrandr --output " + s.port + " --primary")
         else:
-            runCommand("xrandr --output " + ports[i] + " --off")
+            runCommand("xrandr --output " + s.port + " --off")
+elif command == "audio":
+    sink = sys.argv[2]
+    for s in sinks:
+        if s.name == sink:
+            runCommand("pacmd set-default-sink " + s.port)
+elif command == "help":
+    print("Commands: \nset [mode] \nscreen [screen] \naudio [speaker]")
 else:
     print("No command \"" + command + "\" exists")
