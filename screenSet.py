@@ -1,11 +1,28 @@
 import subprocess
 import sys
-from os.path import isfile, join, splitext
+from os.path import isfile, join, splitext, expanduser, exists
+from os import mkdir, listdir
+
+path = expanduser('~/.config/Screen-Switcher')
 
 def runCommand(bashCmd):
     print("Running command: " + bashCmd)
     process = subprocess.Popen(bashCmd.split(), stdout=subprocess.PIPE)
     output, error = process.communicate()
+
+def init():
+    if not exists(path):
+        mkdir(path)
+    file = open(join(path, 'modes.cfg'), 'w+')
+    file.write('# Mode Name:List,of,screens:Audio Sink:Options,other option')
+    file.close()
+    file = open(join(path, 'screens.cfg'), 'w+')
+    file.write('# Name:port (via xrandr)')
+    file.close()
+    file = open(join(path, 'speakers.cfg'), 'w+')
+    file.write('# Name:sink (via pactl list sinks)')
+    file.close()
+    print("Please edit files in " + path + " to setup")
 
 class Mode(object):
     name = ""
@@ -35,13 +52,17 @@ class Sink(object):
         self.name = parts[0]
         self.port = parts[1]
 
-modesFile = open("modes.cfg", 'r').read().split('\n')
+if not exists(path):
+    init()
+    sys.exit()
+
+modesFile = open(join(path, 'modes.cfg'), 'r').read().split('\n')
 modes = [Mode(l) for l in modesFile if ":" in l and l[0] is not '#']
 
-screensFile = open("screens.cfg", 'r').read().split('\n')
+screensFile = open(join(path, 'screens.cfg'), 'r').read().split('\n')
 screens = [Screen(l) for l in screensFile if ":" in l and l[0] is not '#']
 
-speakersFile = open("speakers.cfg", 'r').read().split('\n')
+speakersFile = open(join(path, 'speakers.cfg'), 'r').read().split('\n')
 sinks = [Sink(l) for l in speakersFile if ":" in l and l[0] is not '#']
 
 # match up
@@ -97,7 +118,9 @@ elif command == "audio":
     for s in sinks:
         if s.name == sink:
             runCommand("pacmd set-default-sink " + s.port)
+elif command == "init":
+    init()
 elif command == "help":
-    print("Commands: \nset [mode] \nscreen [screen] \naudio [speaker]")
+    print("Commands: \nset [mode] \nscreen [screen] \naudio [speaker] \ninit")
 else:
     print("No command \"" + command + "\" exists")

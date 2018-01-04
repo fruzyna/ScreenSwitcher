@@ -1,5 +1,0 @@
-Window manager warning: Treating resize request of legacy application 0x3600001 (modes.cfg ) as a fullscreen request
-Entity: line 1: parser error : xmlParseEntityRef: no name
-/><option name="active_plugins" type="list"><type>string</type><default><value>&
-                                                                               ^
-compiz (core) - Warn: Unable to parse XML metadata
