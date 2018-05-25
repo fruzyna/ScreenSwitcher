@@ -102,3 +102,6 @@ ENV/
 
 # nohup output from running
 ./nohub.out
+
+# visual studio code files
+.vscode/
