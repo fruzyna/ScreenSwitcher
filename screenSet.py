@@ -19,22 +19,13 @@ def init():
         mkdir(path)
 
     # Generates screens config
-    file = open(join(path, 'screens.cfg'), 'w+')
-    file.write('# Name:port (via xrandr)')
-    file.write(getMonitors())
-    file.close()
+    writeConfigFile('screens.cfg', False)
 
     # Generates speakers config
-    file = open(join(path, 'speakers.cfg'), 'w+')
-    file.write('# Name:sink (via pactl list short sinks)')
-    file.write(getSinks())
-    file.close()
+    writeConfigFile('speakers.cfg', False)
 
     # Generates modes config
-    file = open(join(path, 'modes.cfg'), 'w+')
-    file.write('# Mode Name:List,of,screens:Audio Sink:Options,other option')
-    file.write(makeModes())
-    file.close()
+    writeConfigFile('modes.cfg', False)
 
     print('\nConfig saved to ' + path)
 
@@ -85,9 +76,33 @@ def makeModes():
         if len(options) == 0:
             options = 'none'
         cfgLines += '\n' + name + ':' + order + ':' + sink + ':' + options
+        print()
     return cfgLines
 
+functions = {'screens.cfg': getMonitors,
+                'speakers.cfg': getSinks,
+                'modes.cfg': makeModes}
+
+headers = {'screens.cfg': '# Name:port (via xrandr)',
+                'speakers.cfg': '# Name:sink (via pactl list short sinks)',
+                'modes.cfg': '# Mode Name:List,of,screens:Audio Sink:Options,other option'}
+
+# Creates a config file
+def writeConfigFile(name, append):
+    outType = 'w+'
+    if append:
+        outType = 'a'
+    file = open(join(path, name), outType)
+    if not append:
+        file.write(headers[name])
+    out = functions[name]()
+    file.write(out)
+    file.close()
+
+#
 # Objects
+#
+
 class Mode(object):
     name = ""
     screens = []
@@ -143,12 +158,12 @@ for m in modes:
         if s.name == m.sink:
             m.sink = s.port
 
-# Gets the command
-command = sys.argv[1]
+#
+# Command Functions
+#
 
-# Executes based on command
-if command == "set":
-    # Sets the display mode
+# Sets the display mode
+def set_cmd():
     modeNm = sys.argv[2]
     mode = Mode("None:none:none:none")
 
@@ -187,8 +202,9 @@ if command == "set":
             runCommand("steam")
     else:
         print("No mode \"" + modeNm + "\" exists!")
-elif command == "screen":
-    # Enables only the given screen
+
+# Enables only the given screen
+def screen_cmd():
     screen = sys.argv[2]
     for s in screens:
         if s.name == screen:
@@ -196,18 +212,80 @@ elif command == "screen":
             runCommand("xrandr --output " + s.port + " --primary")
         else:
             runCommand("xrandr --output " + s.port + " --off")
-elif command == "audio":
-    # Enables only the given sink
+
+# Enables only the given sink
+def audio_cmd():
     sink = sys.argv[2]
     for s in sinks:
         if s.name == sink:
             runCommand("pacmd set-default-sink " + s.port)
-elif command == "init":
-    # Re-runs the initialization script
-    init()
-elif command == "help":
+
+# List all options for a given object type
+def list_cmd():
+    obj = sys.argv[2]
+    if obj == 'screens':
+        printHeader('Available Screens')
+        for s in screens:
+            print(s.name + ' on ' + s.port)
+    elif obj == 'sinks':
+        printHeader('Available Audio Sinks')
+        for s in sinks:
+            print(s.name + ' on ' + s.port)
+    elif obj == 'modes':
+        printHeader('Available Modes')
+        for m in modes:
+            print(m.name)
+            print('\tScreens:\t' + ','.join(m.screens))
+            print('\tAudio Sink:\t' + m.sink)
+            print('\tOptions:\t' + ','.join(m.options))
+    else:
+        print('Invalid object "' + obj + '". Please choose from screens, (audio) sinks, and modes.')
+
+def reset_cmd():
+    obj = sys.argv[2]
+    if obj == 'screens':
+        writeConfigFile('screens.cfg', False)
+    elif obj == 'sinks':
+        writeConfigFile('speakers.cfg', False)
+    elif obj == 'modes':
+        writeConfigFile('modes.cfg', False)
+    elif obj == 'all':
+        init()
+    else:
+        print('Invalid object "' + obj + '". Please choose from screens, (audio) sinks, and modes.')
+
+def add_cmd():
+    obj = sys.argv[2]
+    if obj == 'modes':
+        writeConfigFile('modes.cfg', True)
+    else:
+        print('Invalid object "' + obj + '". Please choose from modes.')
+
+def help_cmd():
     # Displays help options
-    print("Commands: \nset [mode] \nscreen [screen] \naudio [speaker] \ninit")
+    print("Commands: \nset [mode] \nscreen [screen] \naudio [speaker] \ninit \nlist [screens/sinks/modes] \nreset [screens/sinks/modes/all] \nadd [modes]")
+
+#
+# Command Execution
+#
+
+# Gets the command
+command = 'no command given'
+if len(sys.argv) > 1:
+    command = sys.argv[1]
+
+commands = {'set': set_cmd,
+            'screen': screen_cmd,
+            'audio': audio_cmd,
+            'list': list_cmd,
+            'init': init,
+            'reset': reset_cmd,
+            'add': add_cmd,
+            'help': help_cmd}
+
+# Runs the command or prints an error
+if command in commands:
+    commands[command]()
 else:
-    # Error
-    print('No command "' + command + '" exists')
+    print('Invalid command "' + command + '".')
+    help_cmd()
