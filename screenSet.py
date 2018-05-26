@@ -241,6 +241,7 @@ def list_cmd():
     else:
         print('Invalid object "' + obj + '". Please choose from screens, (audio) sinks, and modes.')
 
+# Allows the user to rerun setup of a config file
 def reset_cmd():
     obj = sys.argv[2]
     if obj == 'screens':
@@ -254,6 +255,7 @@ def reset_cmd():
     else:
         print('Invalid object "' + obj + '". Please choose from screens, (audio) sinks, and modes.')
 
+# Allows the user to continue adding new modes
 def add_cmd():
     obj = sys.argv[2]
     if obj == 'modes':
@@ -261,8 +263,8 @@ def add_cmd():
     else:
         print('Invalid object "' + obj + '". Please choose from modes.')
 
+# Displays help options
 def help_cmd():
-    # Displays help options
     print("Commands: \nset [mode] \nscreen [screen] \naudio [speaker] \ninit \nlist [screens/sinks/modes] \nreset [screens/sinks/modes/all] \nadd [modes]")
 
 #
