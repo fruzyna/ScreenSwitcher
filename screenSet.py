@@ -35,6 +35,7 @@ def printHeader(title):
 
 # Helps user build monitors config file
 def getMonitors():
+    input('Press Enter when all displays are connected')
     printHeader('Initializing Displays')
     output = runCommand('xrandr --listmonitors')
     cfgLines = ''
@@ -169,7 +170,7 @@ def set_cmd():
 
     # Finds the matching mode object
     for m in modes:
-        if m.name == modeNm:
+        if m.name.upper() == modeNm.upper():
             mode = m
 
     # If the mode was found, implement it
@@ -206,19 +207,28 @@ def set_cmd():
 # Enables only the given screen
 def screen_cmd():
     screen = sys.argv[2]
+    found = False
     for s in screens:
-        if s.name == screen:
+        if s.name.upper() == screen.upper():
             runCommand("xrandr --output " + s.port + " --auto")
             runCommand("xrandr --output " + s.port + " --primary")
-        else:
-            runCommand("xrandr --output " + s.port + " --off")
+            found = True
+            break;
+    if found:
+        for s in screens:
+            if s.name.upper() != screen.upper():
+                runCommand("xrandr --output " + s.port + " --off")
+    else:    
+        print('Screen', screen, 'not found!')
 
 # Enables only the given sink
 def audio_cmd():
     sink = sys.argv[2]
     for s in sinks:
-        if s.name == sink:
+        if s.name.upper() == sink.upper():
             runCommand("pacmd set-default-sink " + s.port)
+            return
+    print('Sink', sink, 'not found!')
 
 # List all options for a given object type
 def list_cmd():
